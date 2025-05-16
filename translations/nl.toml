@@ -316,3 +316,19 @@ inlineReceiveCreateWalletMessage = """Chat met %s 👈 om uw wallet te beheren."
 inlineReceiveYourselfMessage     = """📖 Je kunt niet aan jezelf betalen."""
 inlineReceiveFailedMessage       = """🚫 Ontvangst mislukt."""
 inlineReceiveCancelledMessage    = """🚫 Ontvangen geannuleerd."""
+
+# CASHU
+cashuProcessingMessage = """⏳ Je Cashu-token wordt verwerkt..."""
+cashuInvalidTokenMessage = """❌ Ongeldig Cashu-token formaat. Stuur een geldig Cashu-token."""
+cashuNoLightningAddressMessage = """❌ Kon je Lightning-adres niet ophalen."""
+cashuTokenAlreadyRedeemedMessage = """❌ Dit Cashu-token is al ingewisseld."""
+cashuInvalidTokenFormatMessage = """❌ Ongeldig Cashu-token formaat of structuur."""
+cashuRedeemFailedMessage = """❌ Kon je Cashu-token niet inwisselen: %v"""
+cashuNoRedemptionDetailsMessage = """❌ Kon inwisselingsdetails niet ophalen."""
+cashuAmountTooSmallMessage = """❌ Token-bedrag te klein voor kosten."""
+cashuCreateInvoiceFailedMessage = """❌ Kon geen factuur maken voor wallet tegoed."""
+cashuProcessFailedMessage = """❌ Kon je Cashu-token niet verwerken: %s"""
+cashuSuccessMessage = """✅ Cashu-token succesvol ingewisseld voor %d sats!
+
+Mint: %s
+Kosten: %d %s"""

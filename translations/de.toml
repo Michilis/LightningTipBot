@@ -360,3 +360,19 @@ inlineTipjarHelpText                    = """📖 Ups, das hat nicht geklappt. %
 
 *Befehl:* `/tipjar <betrag> <pro_user>`
 *Beispiel:* `/tipjar 210 21`"""
+
+# CASHU
+cashuProcessingMessage = """⏳ Verarbeite dein Cashu-Token..."""
+cashuInvalidTokenMessage = """❌ Ungültiges Cashu-Token-Format. Bitte sende ein gültiges Cashu-Token."""
+cashuNoLightningAddressMessage = """❌ Konnte deine Lightning-Adresse nicht abrufen."""
+cashuTokenAlreadyRedeemedMessage = """❌ Dieses Cashu-Token wurde bereits eingelöst."""
+cashuInvalidTokenFormatMessage = """❌ Ungültiges Cashu-Token-Format oder -Struktur."""
+cashuRedeemFailedMessage = """❌ Konnte dein Cashu-Token nicht einlösen: %v"""
+cashuNoRedemptionDetailsMessage = """❌ Konnte Einlösungsdetails nicht abrufen."""
+cashuAmountTooSmallMessage = """❌ Token-Betrag zu klein für Gebühren."""
+cashuCreateInvoiceFailedMessage = """❌ Konnte keine Rechnung für Wallet-Guthaben erstellen."""
+cashuProcessFailedMessage = """❌ Konnte dein Cashu-Token nicht verarbeiten: %s"""
+cashuSuccessMessage = """✅ Cashu-Token erfolgreich eingelöst für %d Sats!
+
+Mint: %s
+Gebühr: %d %s"""

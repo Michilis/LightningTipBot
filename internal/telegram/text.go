@@ -47,38 +47,23 @@ func (bot *TipBot) anyTextHandler(ctx intercept.Context) (intercept.Context, err
 		}
 
 		// Send initial processing message
-		processingMsg := bot.trySendMessage(m.Sender, "⏳ Processing your Cashu token...")
+		processingMsg := bot.trySendMessage(m.Sender, Translate(ctx, "cashuProcessingMessage"))
 
-		// Get user's lightning address
-		lnaddr, err := bot.UserGetLightningAddress(user)
+		// Get the response details
+		response, err := cashu.GetRedeemResponse(token, configuration.Get().Cashu.ServiceURL)
 		if err != nil {
-			log.Errorf("[Cashu] Error getting lightning address: %v", err)
+			log.Errorf("[Cashu] Error getting redeem response: %v", err)
 			bot.tryDeleteMessage(processingMsg)
-			bot.trySendMessage(m.Sender, "❌ Could not get your lightning address.")
-			return ctx, err
-		}
-
-		// Redeem the token
-		amount, err := cashu.RedeemCashuToken(token, configuration.Get().Cashu.ServiceURL)
-		if err != nil {
-			log.Errorf("[Cashu] Error redeeming token: %v", err)
-			bot.tryDeleteMessage(processingMsg)
-			if strings.Contains(err.Error(), "already redeemed") {
-				bot.trySendMessage(m.Sender, "❌ This Cashu token has already been redeemed.")
-			} else if strings.Contains(err.Error(), "invalid token") {
-				bot.trySendMessage(m.Sender, "❌ Invalid Cashu token format or structure.")
-			} else {
-				bot.trySendMessage(m.Sender, fmt.Sprintf("❌ Could not redeem your Cashu token: %v", err))
-			}
+			bot.trySendMessage(m.Sender, Translate(ctx, "cashuNoRedemptionDetailsMessage"))
 			return ctx, err
 		}
 
 		// Add a small fee buffer to account for routing fees
-		feeBuffer := int64(1) // 1 sat fee buffer
-		invoiceAmount := amount - feeBuffer
+		feeBuffer := response.Fee // Use the fee from the response
+		invoiceAmount := response.NetAmount // Use the net amount after fees
 		if invoiceAmount <= 0 {
 			bot.tryDeleteMessage(processingMsg)
-			bot.trySendMessage(m.Sender, "❌ Token amount too small to cover fees.")
+			bot.trySendMessage(m.Sender, Translate(ctx, "cashuAmountTooSmallMessage"))
 			return ctx, fmt.Errorf("token amount too small")
 		}
 
@@ -92,7 +77,7 @@ func (bot *TipBot) anyTextHandler(ctx intercept.Context) (intercept.Context, err
 		if err != nil {
 			log.Errorf("[Cashu] Error creating invoice: %v", err)
 			bot.tryDeleteMessage(processingMsg)
-			bot.trySendMessage(m.Sender, "❌ Could not create invoice for wallet credit.")
+			bot.trySendMessage(m.Sender, Translate(ctx, "cashuCreateInvoiceFailedMessage"))
 			return ctx, err
 		}
 
@@ -120,17 +105,22 @@ func (bot *TipBot) anyTextHandler(ctx intercept.Context) (intercept.Context, err
 			}
 
 			// Format the error message for display
-			displayMsg := fmt.Sprintf("❌ Could not process your Cashu token: %s", errorMsg)
+			displayMsg := fmt.Sprintf(Translate(ctx, "cashuProcessFailedMessage"), errorMsg)
 			bot.trySendMessage(m.Sender, displayMsg)
 			return ctx, err
 		}
 
 		// Delete processing message and send success message
 		bot.tryDeleteMessage(processingMsg)
-		bot.trySendMessage(m.Sender, fmt.Sprintf("✅ Successfully redeemed %d sats from your Cashu token!\n\nMint: %s\nYour Lightning address: `%s`", 
+		feeText := "sat"
+		if feeBuffer > 1 {
+			feeText = "sats"
+		}
+		bot.trySendMessage(m.Sender, fmt.Sprintf(Translate(ctx, "cashuSuccessMessage"), 
 			invoiceAmount,
-			"https://21mint.me",
-			lnaddr))
+			response.MintURL,
+			feeBuffer,
+			feeText))
 		return ctx, nil
 	}
 

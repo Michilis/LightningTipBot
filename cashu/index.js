@@ -209,7 +209,10 @@ app.post('/redeem', async (req, res) => {
         res.json({
             success: true,
             amount: amount,
-            mint_url: tokenMintUrl
+            mint_url: tokenMintUrl,
+            fee: 1, // 1 sat fee
+            total_amount: amount,
+            net_amount: amount - 1 // amount after fee
         });
     } catch (error) {
         console.error('Error redeeming token:', error);

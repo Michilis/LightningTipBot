@@ -410,3 +410,19 @@ For users (in private chat): `/join <group_name>`\nExample: `/join TheBestBitcoi
 generateDalleHelpMessage        = """Generate images using OpenAI DALLE 2.\nUsage: `/generate <prompt>`\nPrice: 1000 sat"""
 generateDallePayInvoiceMessage  = """Pay this invoice to generate four images 👇"""
 generateDalleGeneratingMessage  = """Your images are being generated. Please wait..."""
+
+# CASHU
+cashuProcessingMessage = """⏳ Processing your Cashu token..."""
+cashuInvalidTokenMessage = """❌ Invalid Cashu token format. Please send a valid Cashu token."""
+cashuNoLightningAddressMessage = """❌ Could not get your lightning address."""
+cashuTokenAlreadyRedeemedMessage = """❌ This Cashu token has already been redeemed."""
+cashuInvalidTokenFormatMessage = """❌ Invalid Cashu token format or structure."""
+cashuRedeemFailedMessage = """❌ Could not redeem your Cashu token: %v"""
+cashuNoRedemptionDetailsMessage = """❌ Could not get redemption details."""
+cashuAmountTooSmallMessage = """❌ Token amount too small to cover fees."""
+cashuCreateInvoiceFailedMessage = """❌ Could not create invoice for wallet credit."""
+cashuProcessFailedMessage = """❌ Could not process your Cashu token: %s"""
+cashuSuccessMessage = """✅ Successfully redeemed %d sats from your Cashu token!
+
+Mint: %s
+Fee: %d %s"""
