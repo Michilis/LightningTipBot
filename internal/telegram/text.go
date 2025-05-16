@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/LightningTipBot/LightningTipBot/internal/cashu"
 	"github.com/LightningTipBot/LightningTipBot/internal/errors"
 	"github.com/LightningTipBot/LightningTipBot/internal/telegram/intercept"
+	"github.com/LightningTipBot/LightningTipBot/internal/configuration"
 
 	"github.com/LightningTipBot/LightningTipBot/internal/lnbits"
 	"github.com/LightningTipBot/LightningTipBot/pkg/lightning"
@@ -36,6 +38,102 @@ func (bot *TipBot) anyTextHandler(ctx intercept.Context) (intercept.Context, err
 		return bot.balanceHandler(ctx)
 	}
 
+	// check for Cashu token
+	if cashu.ContainsCashuToken(m.Text) {
+		token := cashu.ExtractCashuToken(m.Text)
+		if token == "" {
+			bot.trySendMessage(m.Sender, "❌ Invalid Cashu token format. Please send a valid Cashu token.")
+			return ctx, nil
+		}
+
+		// Send initial processing message
+		processingMsg := bot.trySendMessage(m.Sender, "⏳ Processing your Cashu token...")
+
+		// Get user's lightning address
+		lnaddr, err := bot.UserGetLightningAddress(user)
+		if err != nil {
+			log.Errorf("[Cashu] Error getting lightning address: %v", err)
+			bot.tryDeleteMessage(processingMsg)
+			bot.trySendMessage(m.Sender, "❌ Could not get your lightning address.")
+			return ctx, err
+		}
+
+		// Redeem the token
+		amount, err := cashu.RedeemCashuToken(token, configuration.Get().Cashu.ServiceURL)
+		if err != nil {
+			log.Errorf("[Cashu] Error redeeming token: %v", err)
+			bot.tryDeleteMessage(processingMsg)
+			if strings.Contains(err.Error(), "already redeemed") {
+				bot.trySendMessage(m.Sender, "❌ This Cashu token has already been redeemed.")
+			} else if strings.Contains(err.Error(), "invalid token") {
+				bot.trySendMessage(m.Sender, "❌ Invalid Cashu token format or structure.")
+			} else {
+				bot.trySendMessage(m.Sender, fmt.Sprintf("❌ Could not redeem your Cashu token: %v", err))
+			}
+			return ctx, err
+		}
+
+		// Add a small fee buffer to account for routing fees
+		feeBuffer := int64(1) // 1 sat fee buffer
+		invoiceAmount := amount - feeBuffer
+		if invoiceAmount <= 0 {
+			bot.tryDeleteMessage(processingMsg)
+			bot.trySendMessage(m.Sender, "❌ Token amount too small to cover fees.")
+			return ctx, fmt.Errorf("token amount too small")
+		}
+
+		// Create an invoice for the user to receive the payment
+		invoiceParams := lnbits.InvoiceParams{
+			Out:    false, // false means receiving payment
+			Amount: invoiceAmount,
+			Memo:   "Cashu token redemption",
+		}
+		invoice, err := user.Wallet.Invoice(invoiceParams, bot.Client)
+		if err != nil {
+			log.Errorf("[Cashu] Error creating invoice: %v", err)
+			bot.tryDeleteMessage(processingMsg)
+			bot.trySendMessage(m.Sender, "❌ Could not create invoice for wallet credit.")
+			return ctx, err
+		}
+
+		// Send the invoice to the Cashu service to be paid by the mint
+		err = cashu.PayInvoice(invoice.PaymentRequest, configuration.Get().Cashu.ServiceURL)
+		if err != nil {
+			log.Errorf("[Cashu] Error paying invoice: %v", err)
+			bot.tryDeleteMessage(processingMsg)
+			
+			// Extract the actual error message from the Cashu service
+			errorMsg := err.Error()
+			if strings.Contains(errorMsg, "error from Cashu service:") {
+				// Extract the JSON error message
+				parts := strings.Split(errorMsg, "error from Cashu service:")
+				if len(parts) > 1 {
+					errorMsg = strings.TrimSpace(parts[1])
+					// Try to parse the JSON error
+					var errorResponse struct {
+						Error string `json:"error"`
+					}
+					if err := json.Unmarshal([]byte(errorMsg), &errorResponse); err == nil {
+						errorMsg = errorResponse.Error
+					}
+				}
+			}
+
+			// Format the error message for display
+			displayMsg := fmt.Sprintf("❌ Could not process your Cashu token: %s", errorMsg)
+			bot.trySendMessage(m.Sender, displayMsg)
+			return ctx, err
+		}
+
+		// Delete processing message and send success message
+		bot.tryDeleteMessage(processingMsg)
+		bot.trySendMessage(m.Sender, fmt.Sprintf("✅ Successfully redeemed %d sats from your Cashu token!\n\nMint: %s\nYour Lightning address: `%s`", 
+			invoiceAmount,
+			"https://21mint.me",
+			lnaddr))
+		return ctx, nil
+	}
+
 	// could be an invoice
 	anyText := strings.ToLower(m.Text)
 	if lightning.IsInvoice(anyText) {
@@ -48,7 +146,6 @@ func (bot *TipBot) anyTextHandler(ctx intercept.Context) (intercept.Context, err
 	}
 	if c := stateCallbackMessage[user.StateKey]; c != nil {
 		return c(ctx)
-		//ResetUserState(user, bot)
 	}
 	return ctx, nil
 }

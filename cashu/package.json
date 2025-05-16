@@ -1,0 +1,16 @@
+{
+  "name": "cashu-redeem-service",
+  "version": "1.0.0",
+  "description": "Cashu token redemption microservice for LightningTipBot",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2",
+    "@cashu/cashu-ts": "2.5.2",
+    "dotenv": "^16.4.5"
+  }
+} 

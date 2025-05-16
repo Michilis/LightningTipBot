@@ -32,3 +32,6 @@ generate:
   worker: 2
 nostr:
   private_key: "hex private key here"
+# Cashu service configuration
+cashu:
+  service_url: "http://localhost:3333"  # URL of the Cashu redemption service

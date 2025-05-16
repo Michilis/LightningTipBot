@@ -16,6 +16,9 @@ var Configuration = struct {
 	Lnbits   LnbitsConfiguration   `yaml:"lnbits"`
 	Generate GenerateConfiguration `yaml:"generate"`
 	Nostr    NostrConfiguration    `yaml:"nostr"`
+	Cashu    struct {
+		ServiceURL string `yaml:"service_url"`
+	} `yaml:"cashu"`
 }{}
 
 type NostrConfiguration struct {
