@@ -210,5 +210,4 @@ func (bot *TipBot) RegisterCommandHandlers() {
 	bot.handle("/transactions", bot.wrapHandler(bot.transactionsHandler))
 	bot.handle("/lnurl", bot.wrapHandler(bot.lnurlHandler))
 	bot.handle("/faucet", bot.wrapHandler(bot.faucetHandler))
-	bot.handle("/faucetstats", bot.wrapHandler(bot.faucetStatsHandler))
 }
