@@ -58,16 +58,22 @@ func (bot *TipBot) anyTextHandler(ctx intercept.Context) (intercept.Context, err
 			return ctx, err
 		}
 
-		// Add a small fee buffer to account for routing fees
-		feeBuffer := response.Fee // Use the fee from the response
-		invoiceAmount := response.NetAmount // Use the net amount after fees
-		if invoiceAmount <= 0 {
+		// Check if amount is sufficient after getting the mint's response
+		if response.Amount <= 0 {
 			bot.tryDeleteMessage(processingMsg)
 			bot.trySendMessage(m.Sender, Translate(ctx, "cashuAmountTooSmallMessage"))
 			return ctx, fmt.Errorf("token amount too small")
 		}
 
 		// Create an invoice for the user to receive the payment
+		// Deduct the fee from the invoice amount to ensure the mint has enough to cover fees
+		invoiceAmount := response.Amount - response.Fee
+		if invoiceAmount <= 0 {
+			bot.tryDeleteMessage(processingMsg)
+			bot.trySendMessage(m.Sender, Translate(ctx, "cashuAmountTooSmallMessage"))
+			return ctx, fmt.Errorf("token amount too small after fee deduction")
+		}
+
 		invoiceParams := lnbits.InvoiceParams{
 			Out:    false, // false means receiving payment
 			Amount: invoiceAmount,
@@ -113,13 +119,13 @@ func (bot *TipBot) anyTextHandler(ctx intercept.Context) (intercept.Context, err
 		// Delete processing message and send success message
 		bot.tryDeleteMessage(processingMsg)
 		feeText := "sat"
-		if feeBuffer > 1 {
+		if response.Fee > 1 {
 			feeText = "sats"
 		}
 		bot.trySendMessage(m.Sender, fmt.Sprintf(Translate(ctx, "cashuSuccessMessage"), 
 			invoiceAmount,
 			response.MintURL,
-			feeBuffer,
+			response.Fee,
 			feeText))
 
 		// Refresh user's balance

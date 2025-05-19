@@ -24,13 +24,13 @@ type RedeemResponse struct {
 }
 
 // calculateFee calculates the fee according to NUT-05 specification
-// Returns at least 2 sats, or 2% of the amount, whichever is greater
+// Returns at least 1 sat, or 2% of the amount, whichever is greater
 func calculateFee(amount int64) int64 {
 	// Calculate 2% of the amount
 	fee := int64(math.Ceil(float64(amount) * 0.02))
-	// Return the greater of 2 sats or the calculated fee
-	if fee < 2 {
-		return 2
+	// Return the greater of 1 sat or the calculated fee
+	if fee < 1 {
+		return 1
 	}
 	return fee
 }
@@ -156,10 +156,6 @@ func GetRedeemResponse(token string, serviceURL string) (*RedeemResponse, error)
 		log.Printf("[Cashu] Token redemption failed without specific error")
 		return nil, fmt.Errorf("token redemption failed")
 	}
-
-	// Calculate fee according to NUT-05 specification
-	result.Fee = calculateFee(result.Amount)
-	result.NetAmount = result.Amount - result.Fee
 
 	log.Printf("[Cashu] Successfully got redemption response for %d sats (fee: %d sats, net: %d sats)", 
 		result.Amount, result.Fee, result.NetAmount)

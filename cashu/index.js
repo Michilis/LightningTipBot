@@ -10,28 +10,15 @@ const app = express();
 const port = process.env.PORT || 3333;
 const debug = process.env.DEBUG === 'true';
 const maxRedeemedTokens = parseInt(process.env.MAX_REDEEMED_TOKENS || '10000');
-const tokenExpirationHours = parseInt(process.env.TOKEN_EXPIRATION_HOURS || '24');
 
 app.use(bodyParser.json());
 
-// Store for tracking redeemed tokens with timestamps
-const redeemedTokens = new Map();
+// Store for tracking redeemed tokens
+const redeemedTokens = new Set();
 
 // Initialize Cashu wallet
 const mintUrl = process.env.MINT_URL || 'https://kashu.me';
 const wallet = new CashuWallet(new CashuMint(mintUrl));
-
-// Cleanup expired tokens periodically
-setInterval(() => {
-    if (tokenExpirationHours > 0) {
-        const now = Date.now();
-        for (const [token, timestamp] of redeemedTokens.entries()) {
-            if (now - timestamp > tokenExpirationHours * 60 * 60 * 1000) {
-                redeemedTokens.delete(token);
-            }
-        }
-    }
-}, 60 * 60 * 1000); // Check every hour
 
 // Helper function to validate token format
 function isValidTokenFormat(token) {
@@ -107,8 +94,8 @@ async function decodeToken(token) {
 function calculateFee(amount) {
     // Calculate 2% of the amount, rounded up
     const fee = Math.ceil(amount * 0.02);
-    // Return the greater of 2 sats or the calculated fee
-    return Math.max(2, fee);
+    // Return the greater of 1 sat or the calculated fee
+    return Math.max(1, fee);
 }
 
 // Redeem endpoint
@@ -203,28 +190,21 @@ app.post('/redeem', async (req, res) => {
 
         // Calculate fee according to NUT-05 specification
         const fee = calculateFee(amount);
-        const netAmount = amount - fee;
 
-        // Mark token as redeemed with timestamp
-        redeemedTokens.set(token, Date.now());
-
-        // Cleanup if we have too many tokens
-        if (redeemedTokens.size > maxRedeemedTokens) {
-            const oldestToken = redeemedTokens.entries().next().value[0];
-            redeemedTokens.delete(oldestToken);
-        }
+        // Mark token as redeemed
+        redeemedTokens.add(token);
 
         if (debug) {
-            console.log(`Redeemed token: ${token}, amount: ${amount}, fee: ${fee}, net: ${netAmount}`);
+            console.log(`Redeemed token: ${token}, amount: ${amount}, fee: ${fee}`);
         }
 
         res.json({
             success: true,
             amount: amount,
             mint_url: tokenMintUrl,
-            fee: fee,
             total_amount: amount,
-            net_amount: netAmount
+            fee: fee,
+            net_amount: amount - fee // Net amount after fee deduction
         });
     } catch (error) {
         console.error('Error redeeming token:', error);
@@ -306,7 +286,7 @@ app.post('/pay', async (req, res) => {
 
     try {
         // Get the mint URL from the last redeemed token
-        const lastToken = Array.from(redeemedTokens.keys()).pop();
+        const lastToken = Array.from(redeemedTokens)[redeemedTokens.size - 1];
         if (!lastToken) {
             return res.status(400).json({ 
                 success: false, 
@@ -421,8 +401,7 @@ app.get('/health', (req, res) => {
         mint_url: mintUrl,
         redeemed_tokens: redeemedTokens.size,
         debug_mode: debug,
-        max_tokens: maxRedeemedTokens,
-        token_expiration_hours: tokenExpirationHours
+        max_tokens: maxRedeemedTokens
     });
 });
 
@@ -431,5 +410,4 @@ app.listen(port, () => {
     console.log(`Cashu redeem service listening on port ${port}`);
     console.log(`Using mint URL: ${mintUrl}`);
     console.log(`Debug mode: ${debug}`);
-    console.log(`Token expiration: ${tokenExpirationHours} hours`);
 }); 
