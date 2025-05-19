@@ -121,6 +121,15 @@ func (bot *TipBot) anyTextHandler(ctx intercept.Context) (intercept.Context, err
 			response.MintURL,
 			feeBuffer,
 			feeText))
+
+		// Refresh user's balance
+		balance, err := bot.GetUserBalance(user)
+		if err != nil {
+			log.Errorf("[Cashu] Error getting user balance: %v", err)
+		} else {
+			bot.trySendMessage(m.Sender, fmt.Sprintf("💰 Your new balance: %d sat", balance))
+		}
+
 		return ctx, nil
 	}
 

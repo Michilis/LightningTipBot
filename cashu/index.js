@@ -103,6 +103,14 @@ async function decodeToken(token) {
     }
 }
 
+// Helper function to calculate fee according to NUT-05 specification
+function calculateFee(amount) {
+    // Calculate 2% of the amount, rounded up
+    const fee = Math.ceil(amount * 0.02);
+    // Return the greater of 2 sats or the calculated fee
+    return Math.max(2, fee);
+}
+
 // Redeem endpoint
 app.post('/redeem', async (req, res) => {
     try {
@@ -193,6 +201,10 @@ app.post('/redeem', async (req, res) => {
             });
         }
 
+        // Calculate fee according to NUT-05 specification
+        const fee = calculateFee(amount);
+        const netAmount = amount - fee;
+
         // Mark token as redeemed with timestamp
         redeemedTokens.set(token, Date.now());
 
@@ -203,16 +215,16 @@ app.post('/redeem', async (req, res) => {
         }
 
         if (debug) {
-            console.log(`Redeemed token: ${token}, amount: ${amount}`);
+            console.log(`Redeemed token: ${token}, amount: ${amount}, fee: ${fee}, net: ${netAmount}`);
         }
 
         res.json({
             success: true,
             amount: amount,
             mint_url: tokenMintUrl,
-            fee: 1, // 1 sat fee
+            fee: fee,
             total_amount: amount,
-            net_amount: amount - 1 // amount after fee
+            net_amount: netAmount
         });
     } catch (error) {
         console.error('Error redeeming token:', error);

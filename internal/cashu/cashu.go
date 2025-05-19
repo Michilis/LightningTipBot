@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"regexp"
 	"strings"
@@ -20,6 +21,18 @@ type RedeemResponse struct {
 	Fee         int64  `json:"fee"`
 	TotalAmount int64  `json:"total_amount"`
 	NetAmount   int64  `json:"net_amount"`
+}
+
+// calculateFee calculates the fee according to NUT-05 specification
+// Returns at least 2 sats, or 2% of the amount, whichever is greater
+func calculateFee(amount int64) int64 {
+	// Calculate 2% of the amount
+	fee := int64(math.Ceil(float64(amount) * 0.02))
+	// Return the greater of 2 sats or the calculated fee
+	if fee < 2 {
+		return 2
+	}
+	return fee
 }
 
 // ContainsCashuToken checks if a message contains a Cashu token
@@ -144,6 +157,11 @@ func GetRedeemResponse(token string, serviceURL string) (*RedeemResponse, error)
 		return nil, fmt.Errorf("token redemption failed")
 	}
 
-	log.Printf("[Cashu] Successfully got redemption response for %d sats", result.Amount)
+	// Calculate fee according to NUT-05 specification
+	result.Fee = calculateFee(result.Amount)
+	result.NetAmount = result.Amount - result.Fee
+
+	log.Printf("[Cashu] Successfully got redemption response for %d sats (fee: %d sats, net: %d sats)", 
+		result.Amount, result.Fee, result.NetAmount)
 	return &result, nil
 } 

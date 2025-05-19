@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/eko/gocache/store"
 	log "github.com/sirupsen/logrus"
 	tb "gopkg.in/lightningtipbot/telebot.v3"
+	"github.com/LightningTipBot/LightningTipBot/internal/telegram/intercept"
 )
 
 // getChatIdFromRecipient will parse the recipient to int64
@@ -181,4 +183,32 @@ func (bot *TipBot) isAdminAndCanInviteUsers(chat *tb.Chat, me *tb.User) bool {
 		}
 	}
 	return false
+}
+
+// wrapHandler converts our intercept.Context handler to telebot.HandlerFunc
+func (bot *TipBot) wrapHandler(handler func(ctx intercept.Context) (intercept.Context, error)) tb.HandlerFunc {
+	return func(c tb.Context) error {
+		ctx := intercept.Context{
+			Context:    context.Background(),
+			TeleContext: intercept.TeleContext{Context: c},
+		}
+		_, err := handler(ctx)
+		return err
+	}
+}
+
+// Register command handlers
+func (bot *TipBot) RegisterCommandHandlers() {
+	bot.handle("/start", bot.wrapHandler(bot.startHandler))
+	bot.handle("/help", bot.wrapHandler(bot.helpHandler))
+	bot.handle("/basics", bot.wrapHandler(bot.basicsHandler))
+	bot.handle("/balance", bot.wrapHandler(bot.balanceHandler))
+	bot.handle("/tip", bot.wrapHandler(bot.tipHandler))
+	bot.handle("/send", bot.wrapHandler(bot.sendHandler))
+	bot.handle("/invoice", bot.wrapHandler(bot.invoiceHandler))
+	bot.handle("/pay", bot.wrapHandler(bot.payHandler))
+	bot.handle("/transactions", bot.wrapHandler(bot.transactionsHandler))
+	bot.handle("/lnurl", bot.wrapHandler(bot.lnurlHandler))
+	bot.handle("/faucet", bot.wrapHandler(bot.faucetHandler))
+	bot.handle("/faucetstats", bot.wrapHandler(bot.faucetStatsHandler))
 }
